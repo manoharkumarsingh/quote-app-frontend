@@ -11,17 +11,35 @@ import { useQuery } from "@apollo/client";
 import { GET_ALL_QUOTES } from "../gqloperations/queries";
 import Loader from "./Loader";
 import Error from "./Error";
+import { gql, useSubscription } from '@apollo/client';
+
+const QUOTE_CREATED_SUBSCRIPTION = gql`
+  subscription OnQuoteCreated {
+    quoteCreated {
+      name
+      by {
+        _id
+        firstName
+      }
+    }
+  }
+`;
 
 const Quotes = () => {
-  const { loading, error, data } = useQuery(GET_ALL_QUOTES, {
+   // Fetch initial list of quotes
+  const { loading, error, data, refetch } = useQuery(GET_ALL_QUOTES, {
     fetchPolicy: "cache-and-network",
   });
-  if (loading) {
-    return <Loader></Loader>;
-  }
-  if (error) {
-    return <Error></Error>;
-  }
+
+  // Listen for new quote creations
+  const { data: subscriptionData } = useSubscription(QUOTE_CREATED_SUBSCRIPTION, {
+    onSubscriptionData: ({ client, subscriptionData }) => {
+      if (subscriptionData.data) {
+        refetch();  // Refetch the quotes to get the latest data, or you can update the cache manually
+      }
+    },
+  });
+
 
   return (
     <div className="flex justify-center">
